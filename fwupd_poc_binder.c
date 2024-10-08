@@ -20,6 +20,8 @@ enum poc_transactions {
     SET_FD,
     GET_DICT,
     SET_DICT,
+    GET_INT,
+    SET_INT,
 };
 
 struct PocDaemon {
@@ -37,14 +39,64 @@ handle_calls_cb(
         gpointer user_data)
 {
     //struct PocDaemon* daemon = user_data;
-
-    g_message("received %d", code);
-
-    const gchar *iface = gbinder_remote_request_interface(req);
+    GBinderLocalReply *reply = NULL;
+    GBinderReader reader;
+    gbinder_remote_request_init_reader(req, &reader);
+    g_autofree gchar *str2 = g_strdup_printf("here is the message for the client");
+    gchar *iface = gbinder_remote_request_interface(req);
 
     g_message("received %s %d", iface, code);
+    if (g_str_equal(iface, "org.freedesktop.fwupd.IPocFwupd")) {
+        switch (code) {
+            case GET_STRING:
+                reply = gbinder_local_object_new_reply(obj);
+                
+                // TODO: this crashes the client... how does libgbinder handle "out" arguments and return values
+                //   What is string8, string16, hidl_string
+                //gbinder_local_reply_append_string8(reply, str2);
+                //gbinder_local_reply_append_string16(reply, str2);
+                *status = GBINDER_STATUS_OK;
+                g_debug("get_string \"%s\"", str2);
+                return reply;
+                break;
+            case SET_STRING:
+                gchar *str = gbinder_reader_read_string16(&reader);
+                g_debug("set_string \"%s\"", str);
+                break;
+            case GET_FD:
+                g_warning("get_fd unimplemented");
+                break;
+            case SET_FD:
+                g_warning("set_fd unimplemented");
+                break;
+            case GET_DICT:
+                g_warning("get_dict unimplemented");
+                break;
+            case SET_DICT:
+                g_warning("set_dict unimplemented");
+                break;
+            case GET_INT:
+                // TODO: This crashes the client
+                gint32 int_value = 1;
+                reply = gbinder_local_object_new_reply(obj);
+                gbinder_local_reply_append_int32(reply, int_value);
+                g_debug("get_int \"%d\"", int_value);
+                return reply;
+                break;
+            case SET_INT:
+                gint32 int_value2 = 0;
+                gbinder_reader_read_int32(&reader, &int_value2);
+                g_debug("set_int \"%d\"", int_value2);
+                break;
+            default:
+                g_warning("received unknown code %d", code);
+        }
+    }
+    else {
+        g_message("unexpected interface %s", iface);
+    }
 
-    return NULL;
+    return reply;
 }
 
 static void

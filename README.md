@@ -33,3 +33,12 @@ adb -d shell service list | grep fwupd
 
 Patches and `meson.build` files for subprojects are in `subprojects/packagefiles`
 
+## Client
+
+In order for a client to connect out binder service we must either tag the executable to allow it to expose a service or switch off selinux
+
+```bash
+adb -d shell setenforce 'permissive'
+```
+
+The clients output can be viewed with `adb -d logcat` or filtered with `adb -d logcat 'fwupd_client:*' 'op.fwupd.client:*' 'AndroidRuntime:*' 'TransactionExecutor:*' '*:S'`
