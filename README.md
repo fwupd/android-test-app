@@ -42,3 +42,8 @@ adb -d shell setenforce 'permissive'
 ```
 
 The clients output can be viewed with `adb -d logcat` or filtered with `adb -d logcat 'fwupd_client:*' 'op.fwupd.client:*' 'AndroidRuntime:*' 'TransactionExecutor:*' '*:S'`
+
+The app can be installed with
+```bash
+./gradlew installDebug
+```
