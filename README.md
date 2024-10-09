@@ -2,6 +2,8 @@ PoC libgbinder based daemon and an idiomatic Android client.
 
 This is to test and validate libgbinders ability to expose an Android service that can be consumed by an Android client using aidl bindings.
 
+This can also be useful as a more generic testbed for other tasks related to fwupd android such as exploring the `USBManager` service.
+
 ## Service/daemon
 
 ### Build
