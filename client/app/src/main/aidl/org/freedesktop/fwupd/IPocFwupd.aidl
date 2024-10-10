@@ -11,4 +11,6 @@ interface IPocFwupd {
     void setDict();
     int getInt();
     void setInt(int value);
+    int[] getIntArray();
+    //void setIntArray(int[] value);
 }

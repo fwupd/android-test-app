@@ -2,18 +2,18 @@
 <adaptive-icon
     xmlns:android="http://schemas.android.com/apk/res/android" >
     <background>
-        <color android:color="#FF00FFFF" />
+        <color android:color="#FFFF00FF" />
     </background>
     <foreground>
         <inset
-            android:insetBottom="24dp"
-            android:insetLeft="18dp"
-            android:insetRight="18dp"
-            android:insetTop="24dp">
+            android:insetBottom="18dp"
+            android:insetLeft="24dp"
+            android:insetRight="24dp"
+            android:insetTop="18dp">
         <shape android:shape="oval">
             <stroke
                 android:width="3dp"
-                android:color="#FFFF00FF"
+                android:color="#FF00FFFF"
                 />
             <solid android:color="#FFFFFFFF"/>
         </shape>
