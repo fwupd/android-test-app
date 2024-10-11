@@ -1,7 +1,12 @@
 #include <glib.h>
+#include <glib-unix.h>
 #include <stdio.h>
 #include <gbinder.h>
 #include <string.h>
+#include <linux/netlink.h>
+#include <linux/rtnetlink.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #define DEFAULT_DEVICE "/dev/binder"
 #define RPC_PROTO "aidl3"
@@ -107,7 +112,7 @@ handle_add_service_cb(GBinderServiceManager *sm, int status, gpointer user_data)
     if (status == GBINDER_STATUS_OK) {
         g_message("service registered: " PROJECT_NAME);
     } else {
-        g_error("failed to register service");
+        g_warning("failed to register service");
     }
 
 }
@@ -122,36 +127,97 @@ handle_presence_cb(GBinderServiceManager *sm, gpointer user_data)
     }
 }
 
+gboolean
+netlink_cb(gint fd, GIOCondition condition, gpointer user_data)
+{
+    gssize len;
+    guint8 buf[10240] = {0x0};
+    g_autoptr(GBytes) blob = NULL;
 
-int main(void) {
-    GMainLoop *loop = g_main_loop_new(NULL, TRUE);
+    len = recv(fd, buf, sizeof(buf), MSG_DONTWAIT);
+    if (len < 0)
+        return G_SOURCE_CONTINUE;
+
+    blob = g_bytes_new(buf, len);
+    g_message("netlink: %s", buf);
+
+    return G_SOURCE_CONTINUE;
+}
+
+struct PocDaemon*
+start_service(void) {
+    struct PocDaemon *daemon = NULL;
 
     GBinderServiceManager *sm = gbinder_servicemanager_new2(DEFAULT_DEVICE, RPC_PROTO, RPC_PROTO);
     // TODO: Using the android 14 patch for libgbinder should allow this to work however whilst it doesn't report failing, it isn't listed by clients.
     //GBinderServiceManager *sm = gbinder_servicemanager_new2(DEFAULT_DEVICE, NULL, NULL);
     if (sm == NULL) {
-        g_error("failed to create service manager with version " RPC_PROTO);
+        g_warning("failed to create service manager with version " RPC_PROTO);
+        return NULL;
     }
 
     if (!gbinder_servicemanager_wait(sm, -1)) {
-        g_error("failed to wait for service manager");
+        g_warning("failed to wait for service manager");
+        return NULL;
     }
 
-    struct PocDaemon daemon;
-    daemon.sm = sm;
+    daemon = calloc(1, sizeof(*daemon));
+    daemon->sm = sm;
 
     // TODO: Many services list "null" as their interface
     // Service is listed as android.hidl.base@1.0::IBase if iface is NULL, and the string if it is not
     GBinderLocalObject *poc_service_obj = gbinder_servicemanager_new_local_object(sm, "org.freedesktop.fwupd.IPocFwupd", handle_calls_cb, &daemon);
 
-    daemon.service_obj = poc_service_obj;
+    daemon->service_obj = poc_service_obj;
 
     gbinder_servicemanager_add_presence_handler(sm, handle_presence_cb, &daemon);
 
     gbinder_servicemanager_add_service(sm, PROJECT_NAME, poc_service_obj, handle_add_service_cb, &daemon);
 
+    return daemon;
+}
+
+void
+start_netlink(void)
+{
+    struct sockaddr_nl nls = {
+        .nl_family = AF_NETLINK,
+        .nl_pid = getpid(),
+        .nl_groups = RTMGRP_LINK,
+    };
+    g_autoptr(GSource) source = NULL;
+
+    gint netlink_fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_KOBJECT_UEVENT);
+    if (netlink_fd < 0) {
+        g_warning("netlink socket fail %s", g_strerror(errno));
+        return;
+    }
+
+    if (bind(netlink_fd, (void *)&nls, sizeof(nls))) {
+        g_warning("failed to bind udev socket %s", g_strerror(errno));
+        return;
+    }
+
+    g_message("connected to netlink");
+
+    source = g_unix_fd_source_new(netlink_fd, G_IO_IN);
+    g_source_set_callback(source, G_SOURCE_FUNC(netlink_cb), &netlink_fd, NULL);
+
+    g_source_attach(source, NULL);
+}
+
+int main(void) {
+    GMainLoop *loop = g_main_loop_new(NULL, TRUE);
+
+    struct PocDaemon* daemon = start_service();
+
+    start_netlink();
+
+    // loop
     g_main_loop_run(loop);
     g_main_loop_unref(loop);
 
-    return 0;
+    free(daemon);
+
+    return EXIT_SUCCESS;
 }
