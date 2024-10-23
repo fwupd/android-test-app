@@ -34,6 +34,8 @@ const val TAG = "fwupd_client"
 
 const val FWUPD_SERVICE = "fwupd_poc"
 
+//var logText: String by mutableStateOf("")
+
 fun getFwupdService(): IPocFwupd? {
     // Create hidden class ServiceManager and connect to binder service
     var binder = Class.forName("android.os.ServiceManager")
@@ -45,7 +47,6 @@ fun getFwupdService(): IPocFwupd? {
 
 class MainActivity : ComponentActivity() {
     private var mService: IPocFwupd? = null
-    private var logText: String by mutableStateOf("")
 
     private fun log(message: String) {
         logText = "$message\n\n$logText"

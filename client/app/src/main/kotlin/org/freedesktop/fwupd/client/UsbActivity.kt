@@ -40,12 +40,12 @@ import androidx.activity.ComponentActivity
 import org.freedesktop.fwupd.IPocFwupd
 
 //const val TAG = "fwupd_client"
-
+var logText: String by mutableStateOf("")
 
 @kotlin.ExperimentalStdlibApi
 class UsbActivity : ComponentActivity() {
     private var mService: UsbManager? = null
-    private var logText: String by mutableStateOf("")
+    //private var logText: String by mutableStateOf("")
     private var usbReceiver: BroadcastReceiver? = null
 
     private fun log(message: String) {
@@ -69,10 +69,14 @@ class UsbActivity : ComponentActivity() {
             """.trimMargin()
     }
 
+		override fun onDestroy() {
+        w(" - - - Stopping fwupd_usb_poc client - - - ")
+        super.onDestroy()
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        w("Starting fwupd_usb_poc client")
+        w(" - - - Starting fwupd_usb_poc client - - - ")
         mService = getSystemService(Context.USB_SERVICE) as UsbManager?
         w("usb = $mService")
 
