@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.os.IBinder
 import android.content.Intent
 import android.content.Context
+import android.content.ServiceConnection
+import android.content.ComponentName
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +31,8 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.ComponentActivity
 import org.freedesktop.fwupd.IPocFwupd
+import org.freedesktop.fwupd.IFwupdListener
+import org.freedesktop.fwupd.MainService
 
 const val TAG = "fwupd_client"
 
@@ -47,6 +51,19 @@ fun getFwupdService(): IPocFwupd? {
 
 class MainActivity : ComponentActivity() {
     private var mService: IPocFwupd? = null
+    //val listeners = mutableListOf<IFwupdListener>()
+
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            //IPocFwupd.Stub.asInterface(service)
+            mService = IPocFwupd.Stub.asInterface(service)
+            w("app service = $mService")
+        }
+        override fun onServiceDisconnected(className: ComponentName) {
+            w("service disco")
+            mService = null
+        }
+    }
 
     private fun log(message: String) {
         logText = "$message\n\n$logText"
@@ -64,8 +81,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         w("Starting fwupd_poc client")
-        mService = getSystemService(FWUPD_SERVICE) as IPocFwupd? ?: getFwupdService()
-        w("fwupd_poc = $mService")
+
 
         setContent {
             MainView()
@@ -73,10 +89,65 @@ class MainActivity : ComponentActivity() {
 
     }
 
+    fun connectToSystemService() {
+        mService = getSystemService(FWUPD_SERVICE) as IPocFwupd? ?: getFwupdService()
+        w("fwupd_poc = $mService")
+    }
+
+    fun connectToAppService() {
+        Intent(this, MainService::class.java).also { intent ->
+            startService(intent)
+            if (bindService(intent, connection, Context.BIND_AUTO_CREATE)) {
+                w("binding app service")
+            } else {
+                w("failed to bind app service")
+            }
+        }
+    }
+
+    fun registerListener() {
+        val listener = object : IFwupdListener.Stub() {
+            override fun onChanged() {
+                v("listener changed")
+            }
+            override fun onDeviceAdded() {
+                v("listener device added")
+            }
+        } 
+        mService?.addListener(listener)
+        //listeners.add(listener)
+
+    }
+
+
     @Composable
     fun MainView() {
         Column {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = {
+                    connectToAppService()
+                }) {
+                    Text("bind app service")
+                }
+                Button(onClick = {
+                    connectToSystemService()
+                }) {
+                    Text("bind system service")
+                }
+                Button(onClick = {
+                    registerListener()
+                    v("register listener ")
+                }) {
+                    Text("register listener")
+                }
+                Button(onClick = {
+                    //var stringOut = mService?.getString()
+                    // TODO: create IFwupdListener
+                    v("call triggerChanged")
+                    mService?.triggerChange()
+                }) {
+                    Text("trigger listener")
+                }
                 Button(onClick = {
                     var stringOut = mService?.getString()
                     v("getString returned $stringOut")

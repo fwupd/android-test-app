@@ -1,5 +1,7 @@
 package org.freedesktop.fwupd;
 
+import org.freedesktop.fwupd.IFwupdListener;
+
 interface IPocFwupd {
     String getString();
     void setString(String value);
@@ -13,4 +15,7 @@ interface IPocFwupd {
     void setInt(int value);
     int[] getIntArray();
     //void setIntArray(int[] value);
+    void addListener(IFwupdListener listener);
+    void removeListener(IFwupdListener listener);
+    void triggerChange();
 }

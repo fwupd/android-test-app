@@ -6,10 +6,10 @@ plugins {
 }
 
 android {
-  namespace = "org.freedesktop.fwupd.client"
+  namespace = "org.freedesktop.fwupd"
   compileSdk = 34
   defaultConfig {
-    applicationId = "org.freedesktop.fwupd.client"
+    applicationId = "org.freedesktop.fwupd"
     minSdk = 30
     targetSdk = 34
     versionCode = 1
