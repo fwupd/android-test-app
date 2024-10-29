@@ -40,7 +40,7 @@ enum poc_transactions {
 enum listener_transactions {
     FWUPD_LISTENER_ON_CHANGED = GBINDER_FIRST_CALL_TRANSACTION,
     FWUPD_LISTENER_ON_DEVICE_ADDED,
-}
+};
 
 struct PocDaemon {
     GBinderServiceManager *sm;
