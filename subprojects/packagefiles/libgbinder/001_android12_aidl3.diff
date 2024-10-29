@@ -1,45 +1,42 @@
 diff --git a/src/gbinder_config.c b/src/gbinder_config.c
-index b467ac5..e71d2d4 100644
+index b467ac5..ac99990 100644
 --- a/src/gbinder_config.c
 +++ b/src/gbinder_config.c
-@@ -135,6 +135,12 @@ static const GBinderConfigPresetGroup gbinder_config_30[] = {
+@@ -135,21 +135,30 @@ static const GBinderConfigPresetGroup gbinder_config_30[] = {
  
  /* API level 31 */
  
+-static const GBinderConfigPresetEntry gbinder_config_31_servicemanager[] = {
 +static const GBinderConfigPresetEntry gbinder_config_31_protocol[] = {
-+    { "/dev/binder", "aidl4" },
-+    { "/dev/vndbinder", "aidl4" },
-+    { NULL, NULL }
-+};
-+
- static const GBinderConfigPresetEntry gbinder_config_31_servicemanager[] = {
      { "/dev/binder", "aidl4" },
      { "/dev/vndbinder", "aidl4" },
-@@ -142,6 +148,14 @@ static const GBinderConfigPresetEntry gbinder_config_31_servicemanager[] = {
+     { NULL, NULL }
  };
  
  static const GBinderConfigPresetGroup gbinder_config_31[] = {
 +    { GBINDER_CONFIG_GROUP_PROTOCOL, gbinder_config_31_protocol },
-+    { GBINDER_CONFIG_GROUP_SERVICEMANAGER, gbinder_config_31_servicemanager },
++    { GBINDER_CONFIG_GROUP_SERVICEMANAGER, gbinder_config_30_servicemanager },
 +    { NULL, NULL }
 +};
 +
-+/* API level 34 - reverts back to AIDL3 protocol */
++/* API level 33 - reverts back to AIDL3 protocol */
 +
-+static const GBinderConfigPresetGroup gbinder_config_34[] = {
++static const GBinderConfigPresetGroup gbinder_config_33[] = {
      { GBINDER_CONFIG_GROUP_PROTOCOL, gbinder_config_30_protocol },
-     { GBINDER_CONFIG_GROUP_SERVICEMANAGER, gbinder_config_31_servicemanager },
+-    { GBINDER_CONFIG_GROUP_SERVICEMANAGER, gbinder_config_31_servicemanager },
++    { GBINDER_CONFIG_GROUP_SERVICEMANAGER, gbinder_config_30_servicemanager },
      { NULL, NULL }
-@@ -150,6 +164,7 @@ static const GBinderConfigPresetGroup gbinder_config_31[] = {
+ };
+ 
  /* Presets sorted by API level in descending order */
  
  static const GBinderConfigPreset gbinder_config_presets[] = {
-+    { 34, gbinder_config_34 },
++    { 33, gbinder_config_33 },
      { 31, gbinder_config_31 },
      { 30, gbinder_config_30 },
      { 29, gbinder_config_29 },
 diff --git a/src/gbinder_rpc_protocol.c b/src/gbinder_rpc_protocol.c
-index a4756b1..74e7b64 100644
+index a4756b1..6bb3169 100644
 --- a/src/gbinder_rpc_protocol.c
 +++ b/src/gbinder_rpc_protocol.c
 @@ -37,6 +37,8 @@
@@ -57,7 +54,7 @@ index a4756b1..74e7b64 100644
  
 +/*==========================================================================*
 + * AIDL protocol appeared in Android 12 (API level 31), but reverted in
-+ * Android 14 (API level 34).
++ * Android 13 (API level 33).
 + *==========================================================================*/
 +
 +#define BINDER_WIRE_FORMAT_VERSION_AIDL4 1
@@ -105,27 +102,34 @@ index a4756b1..74e7b64 100644
  };
  
 diff --git a/unit/unit_config/unit_config.c b/unit/unit_config/unit_config.c
-index 92fd489..9da6e8a 100644
+index 92fd489..9f526b7 100644
 --- a/unit/unit_config/unit_config.c
 +++ b/unit/unit_config/unit_config.c
-@@ -531,6 +531,20 @@ static const TestPresetsData test_presets_data [] = {
+@@ -531,11 +531,25 @@ static const TestPresetsData test_presets_data [] = {
          "[General]\n"
          "ApiLevel = 31\n"
          "[Protocol]\n"
 +        "/dev/binder = aidl4\n"
 +        "/dev/vndbinder = aidl4\n"
 +        "[ServiceManager]\n"
-+        "/dev/binder = aidl4\n"
-+        "/dev/vndbinder = aidl4\n"
++        "/dev/binder = aidl3\n"
++        "/dev/vndbinder = aidl3\n"
 +    },{
-+        "34",
++        "33",
 +
 +        "[General]\n"
-+        "ApiLevel = 34",
++        "ApiLevel = 33",
 +
 +        "[General]\n"
-+        "ApiLevel = 34\n"
++        "ApiLevel = 33\n"
 +        "[Protocol]\n"
          "/dev/binder = aidl3\n"
          "/dev/vndbinder = aidl3\n"
          "[ServiceManager]\n"
+-        "/dev/binder = aidl4\n"
+-        "/dev/vndbinder = aidl4\n"
++        "/dev/binder = aidl3\n"
++        "/dev/vndbinder = aidl3\n"
+     }
+ };
+ 
