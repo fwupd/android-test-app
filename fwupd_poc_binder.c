@@ -1,3 +1,6 @@
+#include "gbinder_client.h"
+#include "gbinder_reader.h"
+#include "gbinder_writer.h"
 #include <glib.h>
 #include <glib-unix.h>
 #include <stdio.h>
@@ -27,11 +30,27 @@ enum poc_transactions {
     SET_DICT,
     GET_INT,
     SET_INT,
+    GET_INT_ARRAY,
+    //SET_INT_ARRAY,
+    ADD_LISTENER,
+    REMOVE_LISTENER,
+    TRIGGER_CHANGE,
 };
+
+enum listener_transactions {
+    FWUPD_LISTENER_ON_CHANGED = GBINDER_FIRST_CALL_TRANSACTION,
+    FWUPD_LISTENER_ON_DEVICE_ADDED,
+}
 
 struct PocDaemon {
     GBinderServiceManager *sm;
     GBinderLocalObject *service_obj;
+    GPtrArray* listener_array;
+};
+
+struct ClientCallbacks {
+    void (*onChanged)();
+    void (*onDeviceAdded)();
 };
 
 static GBinderLocalReply*
@@ -43,7 +62,7 @@ handle_calls_cb(
         int* status,
         gpointer user_data)
 {
-    //struct PocDaemon* daemon = user_data;
+    struct PocDaemon* daemon = user_data;
     GBinderLocalReply *reply = NULL;
     GBinderReader reader;
     gbinder_remote_request_init_reader(req, &reader);
@@ -92,6 +111,27 @@ handle_calls_cb(
                 gint32 int_value2 = 0;
                 gbinder_reader_read_int32(&reader, &int_value2);
                 g_debug("set_int \"%d\"", int_value2);
+                break;
+            case ADD_LISTENER:
+                GBinderRemoteObject *listener_obj = gbinder_reader_read_object(&reader);
+                g_ptr_array_add(daemon->listener_array, listener_obj);
+                g_debug("add_listener");
+                break;
+            case REMOVE_LISTENER:
+                g_debug("remove_listener unimplemented");
+                break;
+            case TRIGGER_CHANGE:
+                for (guint i = 0; i < daemon->listener_array->len; i++ )
+                {
+                    GBinderRemoteObject *listener_obj = g_ptr_array_index(daemon->listener_array, i);
+                    GBinderClient *listener_client = gbinder_client_new(listener_obj, "org.freedesktop.fwupd.IFwupdListener");
+                    GBinderLocalRequest* listener_req  = gbinder_client_new_request(listener_client);
+
+                    gint listener_req_status;
+                    gbinder_client_transact_sync_reply(listener_client, FWUPD_LISTENER_ON_CHANGED /* changed */, listener_req, &listener_req_status);
+                }
+
+                g_debug("trigger_change");
                 break;
             default:
                 g_warning("received unknown code %d", code);
@@ -162,17 +202,18 @@ start_service(void) {
     }
 
     daemon = calloc(1, sizeof(*daemon));
+    daemon->listener_array = g_ptr_array_new();
     daemon->sm = sm;
 
     // TODO: Many services list "null" as their interface
     // Service is listed as android.hidl.base@1.0::IBase if iface is NULL, and the string if it is not
-    GBinderLocalObject *poc_service_obj = gbinder_servicemanager_new_local_object(sm, "org.freedesktop.fwupd.IPocFwupd", handle_calls_cb, &daemon);
+    GBinderLocalObject *poc_service_obj = gbinder_servicemanager_new_local_object(sm, "org.freedesktop.fwupd.IPocFwupd", handle_calls_cb, daemon);
 
     daemon->service_obj = poc_service_obj;
 
-    gbinder_servicemanager_add_presence_handler(sm, handle_presence_cb, &daemon);
+    gbinder_servicemanager_add_presence_handler(sm, handle_presence_cb, daemon);
 
-    gbinder_servicemanager_add_service(sm, PROJECT_NAME, poc_service_obj, handle_add_service_cb, &daemon);
+    gbinder_servicemanager_add_service(sm, PROJECT_NAME, poc_service_obj, handle_add_service_cb, daemon);
 
     return daemon;
 }
