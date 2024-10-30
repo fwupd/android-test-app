@@ -74,11 +74,10 @@ handle_calls_cb(
         switch (code) {
             case GET_STRING:
                 reply = gbinder_local_object_new_reply(obj);
-                
-                // TODO: this crashes the client... how does libgbinder handle "out" arguments and return values
-                //   What is string8, string16, hidl_string
-                //gbinder_local_reply_append_string8(reply, str2);
-                //gbinder_local_reply_append_string16(reply, str2);
+
+                gbinder_local_reply_append_int32(reply, GBINDER_STATUS_OK);
+                gbinder_local_reply_append_string16(reply, str2);
+
                 *status = GBINDER_STATUS_OK;
                 g_debug("get_string \"%s\"", str2);
                 return reply;
@@ -100,10 +99,12 @@ handle_calls_cb(
                 g_warning("set_dict unimplemented");
                 break;
             case GET_INT:
-                // TODO: This crashes the client
-                gint32 int_value = 1;
+                gint32 int_value = 99;
                 reply = gbinder_local_object_new_reply(obj);
+
+                gbinder_local_reply_append_int32(reply, GBINDER_STATUS_OK);
                 gbinder_local_reply_append_int32(reply, int_value);
+
                 g_debug("get_int \"%d\"", int_value);
                 return reply;
                 break;
