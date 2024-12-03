@@ -66,7 +66,7 @@ I have tried `chcon u:object_r:default_android_service:s0 fwupd-poc-binder` but 
 
 The clients output can be viewed with `adb -d logcat` or filtered with:
 ```bash
-adb -d logcat 'fwupd_client:*' 'op.fwupd.client:*' 'AndroidRuntime:*' 'TransactionExecutor:*' 'SELinux:*' '*:S'
+adb -d logcat 'fwupd_client:*' 'op.fwupd.client:*' 'AndroidRuntime:*' 'TransactionExecutor:*' 'SELinux:*' 'DEBUG:*' '*:S'
 ```
 
 The app can be installed with
