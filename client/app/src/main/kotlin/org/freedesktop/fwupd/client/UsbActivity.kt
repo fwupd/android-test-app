@@ -37,7 +37,6 @@ import android.hardware.usb.UsbManager
 import android.hardware.usb.UsbDevice
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.ComponentActivity
-import org.freedesktop.fwupd.IPocFwupd
 
 //const val TAG = "fwupd_client"
 var logText: String by mutableStateOf("")

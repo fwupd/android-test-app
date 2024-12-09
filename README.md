@@ -71,5 +71,5 @@ adb -d logcat 'fwupd_client:*' 'op.fwupd.client:*' 'AndroidRuntime:*' 'Transacti
 
 The app can be installed with
 ```bash
-./gradlew installDebug
+FWUPD_AIDL_PATH="${FWUPD_REPO_PATH}/contrib/android/aidl" ./gradlew installDebug
 ```

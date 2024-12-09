@@ -5,6 +5,9 @@ plugins {
   id("org.jetbrains.kotlin.plugin.compose") version "2.0.20"
 }
 
+val fwupdAidlPath: String by rootProject.extra
+//val fwupdAidlPath by rootProject.extra
+
 android {
   namespace = "org.freedesktop.fwupd"
   compileSdk = 34
@@ -18,6 +21,12 @@ android {
   buildFeatures {
     aidl = true
     compose = true
+  }
+  sourceSets {
+    val main by getting
+    main.apply {
+      aidl.setSrcDirs(listOf("src/main/aidl", fwupdAidlPath))
+    }
   }
 
   composeOptions {
