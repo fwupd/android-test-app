@@ -12,6 +12,10 @@ import org.freedesktop.fwupdpoc.Device
 import org.freedesktop.fwupdpoc.OtherExample
 import org.freedesktop.fwupdpoc.DeepExample
 import org.freedesktop.fwupd.IFwupd
+import android.util.Log
+import java.io.FileInputStream
+
+const val TAG = "fwupd_poc_service"
 
 class MainService : Service() {
     val listeners = mutableListOf<IPocFwupdListener>()
@@ -36,7 +40,13 @@ class MainService : Service() {
             return null
         }
         override fun setFD(value: ParcelFileDescriptor?) {
+            var fd = value?.getFileDescriptor()
+            Log.v(TAG, "${value} is pfd size ${value?.getStatSize()}")
+            Log.v(TAG, "${fd} is fd valid ${fd?.valid()}")
 
+            var out = FileInputStream(fd)
+            var value = out.read()
+            Log.v(TAG, "first byte is ${value}")
         }
         override fun getDict() {}
         override fun setDict() {}

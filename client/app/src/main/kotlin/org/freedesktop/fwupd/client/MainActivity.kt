@@ -2,12 +2,17 @@ package org.freedesktop.fwupd.client
 
 import android.os.BaseBundle
 import android.os.PersistableBundle
+import android.os.ParcelFileDescriptor
 import android.os.Bundle
 import android.os.IBinder
+import android.content.ContentResolver
 import android.content.Intent
 import android.content.Context
 import android.content.ServiceConnection
 import android.content.ComponentName
+import android.net.LocalServerSocket
+import android.net.LocalSocketAddress
+import android.net.LocalSocket
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +35,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.launch
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.ComponentActivity
@@ -39,7 +47,9 @@ import org.freedesktop.fwupdpoc.Device
 import org.freedesktop.fwupdpoc.DeepExample
 import org.freedesktop.fwupd.MainService
 import org.freedesktop.fwupd.IFwupd
+import org.freedesktop.fwupd.IFwupdEventListener
 import kotlin.collections.toTypedArray
+import java.io.FileDescriptor
 
 const val TAG = "fwupd_client"
 
@@ -76,8 +86,10 @@ fun printBundle(bundle: BaseBundle?): String {
                 out += "\n$key: ${a},"
             }
         }
+        return "$bundle:{${out.prependIndent("  ")}\n}"
+    } else {
+        return "(null)"
     }
-    return "$bundle:{${out.prependIndent("  ")}\n}"
 }
 fun printArray(array: Array<*>?): String {
     var out = ""
@@ -197,6 +209,39 @@ class MainActivity : ComponentActivity() {
 
     }
 
+    fun registerFwupdListener() {
+        val listener = object : IFwupdEventListener.Stub() {
+            override fun onChanged() {
+                v("listener changed")
+            }
+            override fun onDeviceAdded(device: PersistableBundle?) {
+                v("""
+                |device added
+                |  ${printBundle(device)}
+                """.trimMargin())
+            }
+            override fun onDeviceRemoved(device: PersistableBundle?) {
+                v("""
+                |device removed
+                |  ${printBundle(device)}
+                """.trimMargin())
+            }
+            override fun onDeviceChanged(device: PersistableBundle?) {
+                v("""
+                |device changed
+                |  ${printBundle(device)}
+                """.trimMargin())
+            }
+            override fun onDeviceRequest(request: PersistableBundle?) {
+                v("""
+                |device request
+                |  ${printBundle(request)}
+                """.trimMargin())
+            }
+        }
+        mFwupdService?.addEventListener(listener)
+    }
+
     fun registerListener() {
         val listener = object : IPocFwupdListener.Stub() {
             override fun onChanged() {
@@ -252,6 +297,37 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun MainView(serviceId: String?) {
+
+        val startInstallResult =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { resultUri ->
+            if (resultUri != null) {
+                v("${resultUri}")
+                var pfd = contentResolver.openFileDescriptor(resultUri, "r")
+
+                v("${pfd} ${pfd?.getFileDescriptor()?.valid()}")
+
+                var guid = "This is a long and cool guid, the sort of guid you really identify with"
+                var options = PersistableBundle()
+                options.putString("hello", "world")
+                options.putInt("value", 42)
+                var other_fd = mFwupdService?.install(guid, pfd, options)
+                v("${other_fd}")
+                //mFwupdService?.install(pfd)
+            }
+        }
+
+        val startPocSetFdResult =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { resultUri ->
+            if (resultUri != null) {
+                v("${resultUri}")
+                var pfd = contentResolver.openFileDescriptor(resultUri, "r")
+
+                v("${pfd} ${pfd?.getFileDescriptor()?.valid()}")
+                mPocService?.setFD(pfd)
+            }
+        }
+
+
         Column {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 Button(
@@ -278,36 +354,18 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Text("bind sys fwupd svc")
                 }
-                Button(
-                    onClick = {
-                        registerListener()
-                        v("register listener ")
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8F8F00))
-                ) {
-                    Text("register evt listener")
-                }
-                Button(
-                    onClick = {
-                        v("call triggerChanged")
-                        mPocService?.triggerChange()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA83F42))
-                ) {
-                    Text("trigger onChange evt")
-                }
-                Button(
-                    onClick = {
-                        v("call triggerDeviceAdded")
-                        mPocService?.triggerDeviceAdded()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA83F42))
-                ) {
-                    Text("trigger onDeviceAdded evt")
-                }
             }
             when (serviceId) {
                 FWUPD_SERVICE -> Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Button(
+                        onClick = {
+                            registerFwupdListener()
+                            v("register listener")
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8F8F00))
+                    ) {
+                        Text("register evt listener")
+                    }
                     Button(onClick = {
                         var bundleOut = mFwupdService?.getDevices()
                         var vString = "getDevices returned "
@@ -317,8 +375,47 @@ class MainActivity : ComponentActivity() {
                     }) {
                         Text("getDevices")
                     }
+                    Button(onClick = {
+                        v("install")
+                        var uri = startInstallResult.launch(arrayOf<String>("application/x-cab"))
+                    }) {
+                        Text("install")
+                    }
                 }
                 FWUPD_POC_SERVICE -> Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Button(
+                        onClick = {
+                            registerListener()
+                            v("register listener ")
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8F8F00))
+                    ) {
+                        Text("register evt listener")
+                    }
+                    Button(
+                        onClick = {
+                            v("call triggerChanged")
+                            mPocService?.triggerChange()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA83F42))
+                    ) {
+                        Text("trigger onChange evt")
+                    }
+                    Button(
+                        onClick = {
+                            v("call triggerDeviceAdded")
+                            mPocService?.triggerDeviceAdded()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA83F42))
+                    ) {
+                        Text("trigger onDeviceAdded evt")
+                    }
+                    Button(onClick = {
+                        v("setFd")
+                        var uri = startPocSetFdResult.launch(arrayOf<String>("application/x-cab"))
+                    }) {
+                        Text("setFd")
+                    }
                     Button(onClick = {
                         var bundleOut = mPocService?.getBundles()
                         var vString = "getBundles returned "
