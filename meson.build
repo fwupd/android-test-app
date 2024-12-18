@@ -45,7 +45,7 @@ configure_file(input: 'gbinder.conf.in',
 configure_file(output: 'config.h',
   configuration: conf_data)
 
-exe = executable('fwupd-poc-binder', ['fwupd_poc_binder.c', '../fwupd/src/' / 'gparcelable.c'],
+exe = executable('fwupd-poc-binder', ['fwupd_poc_binder.c', get_option('fwupd-path') / 'src/gparcelable.c'],
   dependencies: poc_deps,
   include_directories: include_directories('../fwupd/src/'),
   install : true,

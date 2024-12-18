@@ -1,0 +1,1 @@
+option('fwupd-path', type : 'string', value : '../fwupd', description : 'Path to fwupd source')
