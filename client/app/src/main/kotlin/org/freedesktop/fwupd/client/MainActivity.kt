@@ -45,6 +45,7 @@ import org.freedesktop.fwupdpoc.IPocFwupd
 import org.freedesktop.fwupdpoc.IPocFwupdListener
 import org.freedesktop.fwupdpoc.Device
 import org.freedesktop.fwupdpoc.DeepExample
+import org.freedesktop.fwupdpoc.ISimpleFd
 import org.freedesktop.fwupd.MainService
 import org.freedesktop.fwupd.IFwupd
 import org.freedesktop.fwupd.IFwupdEventListener
@@ -55,6 +56,9 @@ const val TAG = "fwupd_client"
 
 const val FWUPD_POC_SERVICE = "fwupd_poc"
 const val FWUPD_SERVICE = "fwupd"
+const val SIMPLE_FD_SERVICE = "simple_fd"
+
+val CAB_MIME_LIST = arrayOf<String>("application/x-cab")
 
 //var logText: String by mutableStateOf("")
 
@@ -128,9 +132,19 @@ fun getFwupdService(): IFwupd? {
     return IFwupd.Stub.asInterface(binder)
 }
 
+fun getSimpleFdService(): ISimpleFd? {
+    // Create hidden class ServiceManager and connect to binder service
+    var binder = Class.forName("android.os.ServiceManager")
+        .getDeclaredMethod("getService", String::class.java)
+        .invoke(null, SIMPLE_FD_SERVICE) as IBinder?
+    // Wrap binder service in aidl interface
+    return ISimpleFd.Stub.asInterface(binder)
+}
+
 class MainActivity : ComponentActivity() {
     private var mPocService: IPocFwupd? = null
     private var mFwupdService: IFwupd? = null
+    private var mSimpleFdService: ISimpleFd? = null
     //val listeners = mutableListOf<IFwupdListener>()
 
     private val connection = object : ServiceConnection {
@@ -185,6 +199,15 @@ class MainActivity : ComponentActivity() {
                 w("$serviceId = $mFwupdService")
 
                 if (mFwupdService != null)
+                    setContent {
+                        MainView(serviceId)
+                    }
+            }
+            SIMPLE_FD_SERVICE -> {
+                mSimpleFdService = getSystemService(SIMPLE_FD_SERVICE) as ISimpleFd? ?: getSimpleFdService()
+                w("$serviceId = $mSimpleFdService")
+
+                if (mSimpleFdService != null)
                     setContent {
                         MainView(serviceId)
                     }
@@ -327,6 +350,22 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        val startSimpleSendFdResult =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { resultUri ->
+            if (resultUri != null) {
+                v("${resultUri}")
+                var pfd = contentResolver.openFileDescriptor(resultUri, "r")
+
+                v("${pfd} ${pfd?.getFileDescriptor()?.valid()}")
+
+                var guid = "This is a long and cool guid, the sort of guid you really identify with"
+                var options = PersistableBundle()
+                options.putString("hello", "world")
+                options.putInt("value", 42)
+                mSimpleFdService?.sendFd(guid, pfd, options)
+            }
+        }
+
 
         Column {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -354,6 +393,14 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Text("bind sys fwupd svc")
                 }
+                Button(
+                    onClick = {
+                        connectToSystemService(SIMPLE_FD_SERVICE)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008F8F))
+                ) {
+                    Text("bind sys simple_fd svc")
+                }
             }
             when (serviceId) {
                 FWUPD_SERVICE -> Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -377,9 +424,18 @@ class MainActivity : ComponentActivity() {
                     }
                     Button(onClick = {
                         v("install")
-                        var uri = startInstallResult.launch(arrayOf<String>("application/x-cab"))
+                        var uri = startInstallResult.launch(CAB_MIME_LIST)
                     }) {
                         Text("install")
+                    }
+                }
+                SIMPLE_FD_SERVICE -> Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Button(
+                        onClick = {
+                            startSimpleSendFdResult.launch(CAB_MIME_LIST);
+                        }
+                    ) {
+                        Text("sendFd")
                     }
                 }
                 FWUPD_POC_SERVICE -> Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -412,7 +468,7 @@ class MainActivity : ComponentActivity() {
                     }
                     Button(onClick = {
                         v("setFd")
-                        var uri = startPocSetFdResult.launch(arrayOf<String>("application/x-cab"))
+                        var uri = startPocSetFdResult.launch(CAB_MIME_LIST)
                     }) {
                         Text("setFd")
                     }

@@ -1,6 +1,6 @@
 project('fwupd-poc-binder', 'c',
   version : '0.1',
-  default_options : ['warning_level=3'])
+  default_options : ['warning_level=3', 'c_std=c23'])
 
 conf_data = configuration_data()
 
@@ -24,6 +24,8 @@ glib_dep = dependency('glib-2.0')
 binder_ndk = cc.find_library('binder_ndk',
 #  dirs: [sys_root / 'usr/lib' / target_triple / sdk_version],
 #  header_include_directories: include_directories(sys_root / 'usr/include'),
+  dirs: [ meson.current_source_dir() / 'lib_ndk' ],
+  header_include_directories: include_directories( 'include_platform' ),
   required: false,
   )
 # binder_ndk = define_dependency('binder_ndk')
@@ -48,6 +50,12 @@ configure_file(output: 'config.h',
 exe = executable('fwupd-poc-binder', ['fwupd_poc_binder.c', get_option('fwupd-path') / 'src/gparcelable.c'],
   dependencies: poc_deps,
   include_directories: include_directories('../fwupd/src/'),
+  install : true,
+)
+
+exe_ndk = executable('simple-fd-svc', ['simple_fd_svc.c', get_option('fwupd-path') / 'src/gparcelable.c'],
+  dependencies: [glib_dep, binder_ndk],
+  include_directories: include_directories('../fwupd/src/', 'include_platform'),
   install : true,
 )
 

@@ -24,6 +24,17 @@ git pull origin pull/7395/head:hughsie/binder
 git checkout hughsie/binder
 ```
 
+### platform libbinder_ndk
+
+The NDK version of `libbinder_ndk.so` doesn't contain service management symbols. I have included in this repo the version from my aarch64 device.
+
+```bash
+adb pull /system/lib64/libbinder_ndk.so
+```
+
+Headers for the `libbinder_ndk.so` platform components can be found here:
+https://cs.android.com/android/platform/superproject/main/+/main:frameworks/native/libs/binder/ndk/include_platform/
+
 ## Service/daemon
 
 These are instructions for installing a test binder service and not for fwupd itself
@@ -71,6 +82,14 @@ adb -d shell service list | grep fwupd
 ```
 
 Patches and `meson.build` files for subprojects are in `subprojects/packagefiles`
+
+## SimpleFd service
+
+`simple-fd-svc` is a service implemented using the platform version `libbinder_ndk.so` without using libgbinder.
+
+This is due to problems I had transferring file descriptors over libgbinder.
+
+The instructions for running it are the same as the previously mentioned service.
 
 ## Client
 
