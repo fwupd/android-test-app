@@ -26,10 +26,10 @@ git checkout hughsie/binder
 
 ### platform libbinder_ndk
 
-The NDK version of `libbinder_ndk.so` doesn't contain service management symbols. I have included in this repo the version from my aarch64 device.
+The NDK version of `libbinder_ndk.so` doesn't contain service management symbols.
 
 ```bash
-adb pull /system/lib64/libbinder_ndk.so
+adb pull /system/lib64/libbinder_ndk.so ./lib_ndk/
 ```
 
 Headers for the `libbinder_ndk.so` platform components can be found here:
