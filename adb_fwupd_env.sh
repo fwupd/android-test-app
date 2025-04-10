@@ -8,7 +8,7 @@
 # ./adb_fwupd_env.sh fwupd-binder --verbose
 
 #FWUPD_DIST_PATH="/system_ext/bin/fwupd"
-FWUPD_DIST_PATH="/data/fwupd-poc-binder"
+FWUPD_DIST_PATH="/data/fwupd"
 
 
 # These were set but fwupd exits if prefix cache dir is `ro`
