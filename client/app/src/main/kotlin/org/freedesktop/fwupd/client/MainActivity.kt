@@ -23,6 +23,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Text
 import androidx.compose.material3.Button
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Card
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
@@ -61,6 +62,30 @@ const val SIMPLE_FD_SERVICE = "simple_fd"
 val CAB_MIME_LIST = arrayOf<String>("application/x-cab")
 
 //var logText: String by mutableStateOf("")
+
+enum class FwupdStatus {
+    UNKNOWN,
+    IDLE,
+    LOADING,
+    DECOMPRESSING,
+    DEVICE_RESTART,
+    DEVICE_WRITE,
+    DEVICE_VERIFY,
+    SCHEDULING,
+    DOWNLOADING,
+    DEVICE_READ,
+    DEVICE_ERASE,
+    WAITING_FOR_AUTH,
+    DEVICE_BUSY,
+    SHUTDOWN,
+    WAITING_FOR_USER,
+    LAST;
+
+    companion object {
+        private val VALUES = FwupdStatus.values()
+        fun fromInt(v: Int) = VALUES.firstOrNull { it.ordinal == v }
+    }
+}
 
 fun printBundle(bundle: BaseBundle?): String {
     var out = ""//"$bundle"uu
@@ -261,6 +286,25 @@ class MainActivity : ComponentActivity() {
                 |  ${printBundle(request)}
                 """.trimMargin())
             }
+            override fun onPropertiesChanged(properties: PersistableBundle?) {
+                if (properties?.containsKey("Percentage") == true) {
+                    val percentage = properties.getInt("Percentage")
+                    properties.remove("Percentage")
+                    v("percentage: ${percentage}%")
+                }
+                if (properties?.containsKey("Status") == true) {
+                    val status = properties.getInt("Status")
+                    val eStatus = FwupdStatus.fromInt(status)
+                    properties.remove("Status")
+                    v("daemon status: ${eStatus}")
+                }
+                if (properties?.isEmpty() == false) {
+                    v("""
+                    |properties changed
+                    |  ${printBundle(properties)}
+                    """.trimMargin())
+                }
+            }
         }
         mFwupdService?.addEventListener(listener)
     }
@@ -321,6 +365,10 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun MainView(serviceId: String?) {
 
+        var reinstall_checked by remember { mutableStateOf(true) }
+        var older_checked by remember { mutableStateOf(true) }
+        var branch_switch_checked by remember { mutableStateOf(true) }
+
         val startInstallResult =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { resultUri ->
             if (resultUri != null) {
@@ -329,12 +377,20 @@ class MainActivity : ComponentActivity() {
 
                 v("${pfd} ${pfd?.getFileDescriptor()?.valid()}")
 
-                var guid = "This is a long and cool guid, the sort of guid you really identify with"
+                var guid = "*"
                 var options = PersistableBundle()
-                options.putString("hello", "world")
-                options.putInt("value", 42)
-                var other_fd = mFwupdService?.install(guid, pfd, options)
-                v("${other_fd}")
+                options.putBoolean("allow-older", older_checked)
+                options.putBoolean("allow-reinstall", reinstall_checked)
+                options.putBoolean("allow-branch-switch", branch_switch_checked)
+                
+                val installThread = Thread {
+                    try {
+                        mFwupdService?.install(guid, pfd, options)
+                    } catch (error: Exception) {
+                        v("install error: ${error.toString()}")
+                    }
+                }
+                installThread.start()
                 //mFwupdService?.install(pfd)
             }
         }
@@ -358,7 +414,7 @@ class MainActivity : ComponentActivity() {
 
                 v("${pfd} ${pfd?.getFileDescriptor()?.valid()}")
 
-                var guid = "This is a long and cool guid, the sort of guid you really identify with"
+                var guid = "*"
                 var options = PersistableBundle()
                 options.putString("hello", "world")
                 options.putInt("value", 42)
@@ -414,10 +470,14 @@ class MainActivity : ComponentActivity() {
                         Text("register evt listener")
                     }
                     Button(onClick = {
-                        var bundleOut = mFwupdService?.getDevices()
-                        var vString = "getDevices returned "
-                        vString += printArray(bundleOut)
-                        v(vString)
+                        try {
+                            var bundleOut = mFwupdService?.getDevices()
+                            var vString = "getDevices returned "
+                            vString += printArray(bundleOut)
+                            v(vString)
+                        } catch (error: Exception) {
+                            v("getDevices error: ${error.toString()}")
+                        }
                         //v(bundleOut?.first().toString())
                     }) {
                         Text("getDevices")
@@ -427,6 +487,41 @@ class MainActivity : ComponentActivity() {
                         var uri = startInstallResult.launch(CAB_MIME_LIST)
                     }) {
                         Text("install")
+                    }
+
+                    Text("allow-older")
+                    Switch(
+                        checked = older_checked,
+                        onCheckedChange = {
+                            older_checked = it
+                        }
+                    )
+                    Text("allow-reinstall")
+                    Switch(
+                        checked = reinstall_checked,
+                        onCheckedChange = {
+                            reinstall_checked = it
+                        }
+                    )
+                    Text("allow-branch-switch")
+                    Switch(
+                        checked = branch_switch_checked,
+                        onCheckedChange = {
+                            branch_switch_checked = it
+                        }
+                    )
+
+                    Button(onClick = {
+                        try {
+                            var bundleOut = mFwupdService?.getProperties(arrayOf("DaemonVersion", "OnlyTrusted"))
+                            var vString = "getProperties returned "
+                            vString += printBundle(bundleOut)
+                            v(vString)
+                        } catch (error: Exception) {
+                            v("getProperties error: ${error.toString()}")
+                        }
+                    }) {
+                        Text("getProperties")
                     }
                 }
                 SIMPLE_FD_SERVICE -> Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
