@@ -126,3 +126,11 @@ FWUPD_AIDL_PATH="${FWUPD_REPO_PATH}/contrib/android/aidl" ./gradlew installDebug
 | Open "fwupd client" | Press "bind sys fwupd svc" to connect to fwupd service | Press "register evt listener" and plug/unplug device | Press "getDevices" to request device list from fwupd |
 |-|-|-|-|
 | ![](docs/01_home_screen.png) | ![](docs/02_bind_fwupd.png) | ![](docs/04_remove_event.png) | ![](docs/05_call_get_devices.png) |
+
+#### Installing a firmware
+
+To test firmware installation make sure you've already connected to the daemon, registered an event listener, verified that fwupd has recognised the device you're wanting to install the firmware on and have the firmware you want to install available in the android file system.
+
+| Set toggles for reinstall etc. and press install | Select the correct firmware for your device | Behold! An update! |
+|-|-|-|
+| ![](docs/install_01_flags.png) | ![](docs/install_02_file_man.png) | ![](docs/install_03_install.png) |
