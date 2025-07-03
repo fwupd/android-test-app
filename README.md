@@ -26,7 +26,7 @@ The NDK version of `libbinder_ndk.so` doesn't contain service management symbols
 adb pull /system/lib64/libbinder_ndk.so ./lib_ndk/
 ```
 
-Headers for the `libbinder_ndk.so` platform components can be found here:
+Headers for the `libbinder_ndk.so` platform components will be included via a [meson wrap file](https://github.com/fwupd/fwupd/blob/hughsie/binder/subprojects/android_frameworks.wrap) and can be viewed here:
 https://cs.android.com/android/platform/superproject/main/+/main:frameworks/native/libs/binder/ndk/include_platform/
 
 ## Service/daemon
