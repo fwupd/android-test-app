@@ -1,12 +1,6 @@
-PoC libgbinder based daemon and an idiomatic Android client.
+# fwupd Android test app
 
-This is to test and validate libgbinders ability to expose an Android service that can be consumed by an Android client using aidl bindings.
-
-This can also be useful as a more generic testbed for other tasks related to fwupd android such as exploring the `USBManager` service.
-
-It also is a testbed for gparcelable for marshalling GVariants into android Parcels.
-
-The android client also provides an GUI to interact with the real fwupd binder service.
+An Android client to test interaction with the [`fwupd-binder`](https://github.com/fwupd/fwupd/tree/hughsie/binder) daemon.
 
 See also [BUILD_ANDROID_NDK.md](https://github.com/fwupd/fwupd/blob/hughsie/binder/BUILD_ANDROID_NDK.md) in the binder branch of fwupd.
 
@@ -83,14 +77,6 @@ adb -d shell service list | grep fwupd
 
 Patches and `meson.build` files for subprojects are in `subprojects/packagefiles`
 
-## SimpleFd service
-
-`simple-fd-svc` is a service implemented using the platform version `libbinder_ndk.so` without using libgbinder.
-
-This is due to problems I had transferring file descriptors over libgbinder.
-
-The instructions for running it are the same as the previously mentioned service.
-
 ## Client
 
 In order for a client to connect to the binder service we must either tag the executable to allow it to expose a service or switch off selinux:
@@ -113,7 +99,7 @@ adb -d logcat 'fwupd_poc_service:*' 'fwupd_client:*' 'op.fwupd.client:*' 'Androi
 
 ### Installation
 
-The android client app can be installed with
+The android client app can be installed by running the following in the `client/` directory:
 
 ```bash
 FWUPD_AIDL_PATH="${FWUPD_REPO_PATH}/contrib/android/aidl" ./gradlew installDebug
@@ -134,3 +120,19 @@ To test firmware installation make sure you've already connected to the daemon, 
 | Set toggles for reinstall etc. and press install | Select the correct firmware for your device | Behold! An update! |
 |-|-|-|
 | ![](docs/install_01_flags.png) | ![](docs/install_02_file_man.png) | ![](docs/install_03_install.png) |
+
+## Appendix
+
+This repo also contains C Android services to test and validate libgbinders ability to expose an Android service that can be consumed by an Android client using aidl bindings.
+
+The app package also exposes an app that useful as a more generic testbed for other tasks related to fwupd android such as exploring the `USBManager` service.
+
+The client also functions as a testbed for gparcelable for marshalling GVariants into android Parcels.
+
+### SimpleFd service
+
+`simple-fd-svc` is a service implemented using the platform version `libbinder_ndk.so` without using libgbinder.
+
+This is due to problems I had transferring file descriptors over libgbinder.
+
+The instructions for running it are the same as the previously mentioned service.
